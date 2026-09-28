@@ -76,6 +76,8 @@ Demanda no Azure → obter informações → IA analisa o requisito → IA prop�
 
 A IA **não** decide onde gravar, **não** altera a estrutura do Azure e **não** cria nada sem aprovação.
 
+**Seleção de Test Plan e Test Suite:** o sistema pode **sugerir** Test Plan/Test Suite com base no contexto, mas no MVP a seleção final deve ser **feita ou confirmada pelo QA**. Isso evita criar o teste no lugar errado.
+
 Regras da IA: agir como QA sênior; **não inventar regra de negócio**; onde faltar informação, marcar "Dúvida para refinamento" ou "Regra não especificada"; responder em JSON validado por schema; PT-BR.
 
 ## PARTE 6 — Formato do cenário / Test Case
@@ -127,7 +129,7 @@ Criar Test Cases na Test Suite correta, vinculados à demanda, seguindo a estrut
 
 Dois componentes independentes:
 
-1. **AzureFlowAgent** — reproduz o fluxo do vídeo via API: `Project → Work Item → Test Plan → Test Suite → Test Case`. Camada isolada `AzureDevOpsService`: `getWorkItem()`, `getRelatedWorkItems()`, `getTestPlans()`, `getTestSuites()`, `getTestCases()`, `createTestCase()`, `addTestCaseToSuite()`, `linkTestCaseToRequirement()`, `copyTestCases()` (sujeita à investigação da Parte 9).
+1. **AzureTestFlowService** — executa o fluxo definido do vídeo via API: `Project → Work Item → Test Plan → Test Suite → Test Case`. **Não toma decisões autônomas**: apenas executa a sequência definida. Camada isolada `AzureDevOpsService`: `getWorkItem()`, `getRelatedWorkItems()`, `getTestPlans()`, `getTestSuites()`, `getTestCases()`, `createTestCase()`, `addTestCaseToSuite()`, `linkTestCaseToRequirement()`, `reuseTestCases()` (**comportamento a definir após a Fase 0**; não é uma operação confirmada e só entra na interface definitiva depois da investigação).
 2. **QAScenarioAgent** — lê a demanda e propõe os cenários (Parte 5 e 6). Independente da interface e do Azure.
 
 Stack sugerida: TypeScript strict, Node.js; interface web local simples (React ou Next.js, avaliar). Validação de schema, tratamento de erros, logs, testes unitários com mocks do Azure, sem overengineering.
