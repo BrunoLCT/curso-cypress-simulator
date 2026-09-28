@@ -15,6 +15,8 @@ export interface DiscoveryData {
   testCaseSuites?: unknown;
   relationTypes?: unknown;
   testCaseTypeFields?: unknown;
+  /** Entradas de `GET wit/fields` (type, readOnly, supportedOperations) dos campos do Test Case. */
+  testCaseFieldCatalog?: unknown;
   notes: string[];
 }
 
@@ -24,6 +26,50 @@ export interface ReportOptions {
   masked: boolean;
   /** Inclui trechos de texto (título, descrição, passos). */
   samples: boolean;
+}
+
+export interface FieldUsageRow {
+  referenceName: string;
+  name: string;
+  type: string;
+  readOnly: boolean | undefined;
+  supportedOperations: string[];
+  /** Somente o que o metadado do tipo informa. NÃO prova obrigatoriedade. */
+  alwaysRequiredPerMetadata: boolean | undefined;
+  hasDefaultValue: boolean;
+  allowedValuesCount: number;
+  filledInRealTestCase: boolean | undefined;
+  requiredStatus: 'indicado-pelo-metadado' | 'nao-indicado';
+  /** Só pode virar true com prova no ambiente/processo real (não é possível em modo somente leitura). */
+  confirmedRequired: false;
+}
+
+const isFilled = (v: unknown): boolean => v !== undefined && v !== null && !(typeof v === 'string' && v.trim() === '');
+
+export function buildFieldUsage(d: DiscoveryData): FieldUsageRow[] {
+  const typeFields = new Map(arr(rec(d.testCaseTypeFields).value ?? d.testCaseTypeFields).map((x) => [str(rec(x).referenceName), rec(x)] as const));
+  const catalog = new Map(arr(rec(d.testCaseFieldCatalog).value ?? d.testCaseFieldCatalog).map((x) => [str(rec(x).referenceName), rec(x)] as const));
+  const real = d.testCase ? rec(rec(d.testCase).fields) : undefined;
+  const names = new Set<string>([...typeFields.keys(), ...(real ? Object.keys(real) : [])]);
+  names.delete('');
+  return [...names].sort().map((ref) => {
+    const t = typeFields.get(ref);
+    const c = catalog.get(ref);
+    const required = t ? t.alwaysRequired === true : undefined;
+    return {
+      referenceName: ref,
+      name: str(t?.name ?? c?.name),
+      type: str(c?.type) || '(não coletado)',
+      readOnly: typeof c?.readOnly === 'boolean' ? c.readOnly : undefined,
+      supportedOperations: arr(c?.supportedOperations).map((o) => str(rec(o).referenceName || rec(o).name || o)),
+      alwaysRequiredPerMetadata: required,
+      hasDefaultValue: isFilled(t?.defaultValue),
+      allowedValuesCount: arr(t?.allowedValues).length,
+      filledInRealTestCase: real ? isFilled(real[ref]) : undefined,
+      requiredStatus: required ? 'indicado-pelo-metadado' : 'nao-indicado',
+      confirmedRequired: false,
+    } satisfies FieldUsageRow;
+  });
 }
 
 export interface RelationRow {
@@ -75,10 +121,8 @@ export function buildReport(d: DiscoveryData, o: ReportOptions): string {
   const tcSuites = arr(rec(d.testCaseSuites).value ?? d.testCaseSuites).map(rec);
   const relTypes = arr(rec(d.relationTypes).value ?? d.relationTypes).map(rec);
   const testedBy = relTypes.filter((r) => /testedby/i.test(str(r.referenceName))).map((r) => str(r.referenceName));
-  const requiredFields = arr(rec(d.testCaseTypeFields).value ?? d.testCaseTypeFields)
-    .map(rec)
-    .filter((x) => x.alwaysRequired === true)
-    .map((x) => `${str(x.name)} (\`${str(x.referenceName)}\`)`);
+  const fieldRows = buildFieldUsage(d);
+  const metaRequired = fieldRows.filter((r) => r.alwaysRequiredPerMetadata === true);
 
   const L: string[] = [];
   L.push('# DESCOBERTA-AMBIENTE — raio-X do Azure DevOps (somente leitura)');
@@ -171,8 +215,18 @@ export function buildReport(d: DiscoveryData, o: ReportOptions): string {
     }
   } else L.push('_Test Case não informado/encontrado nesta execução._', '');
 
-  L.push('## 5. Campos obrigatórios do tipo Test Case', '');
-  L.push(requiredFields.length ? requiredFields.map((x) => `- ${x}`).join('\n') + '\n' : '_Não coletado (ver avisos) ou nenhum marcado como `alwaysRequired`._\n');
+  L.push('## 5. Metadados dos campos do Test Case', '');
+  L.push('> `test-case-fields.json` traz **metadados** dos campos. A obrigatoriedade real pode depender do tipo de Work Item, do processo, do estado e de regras configuradas no projeto, e **não é concluída aqui**. A coluna "alwaysRequired (metadado)" é só o que a API informa; **"obrigatório confirmado" fica "não" até haver prova no ambiente/processo real** (por exemplo, conferência em Configurações do projeto > Processo ou tentativa de criação em sandbox numa fase futura, nunca nesta fase de leitura).', '');
+  if (fieldRows.length) {
+    const yn = (b: boolean | undefined): string => (b === undefined ? 'n/d' : b ? 'sim' : 'não');
+    L.push(`Campos: **${fieldRows.length}** · com \`alwaysRequired=true\` no metadado: **${metaRequired.length}** · preenchidos no Test Case real: **${fieldRows.filter((r) => r.filledInRealTestCase).length}**.`, '');
+    L.push(
+      table(
+        ['referenceName', 'nome', 'tipo', 'readOnly', 'alwaysRequired (metadado)', 'valor padrão', 'valores permitidos', 'preenchido no Test Case real', 'obrigatório confirmado'],
+        fieldRows.map((r) => [`\`${r.referenceName}\``, r.name, r.type, yn(r.readOnly), yn(r.alwaysRequiredPerMetadata), yn(r.hasDefaultValue), String(r.allowedValuesCount), yn(r.filledInRealTestCase), 'não comprovado']),
+      ),
+    );
+  } else L.push('_Metadados não coletados (ver avisos)._', '');
 
   L.push('## 6. Hipóteses da Fase 0 × o que foi observado', '');
   const yes = (b: boolean, ok: string, no: string): string => (b ? ok : no);
@@ -181,7 +235,7 @@ export function buildReport(d: DiscoveryData, o: ReportOptions): string {
       ['#', 'Hipótese / pergunta', 'Observado', 'Situação'],
       [
         ['A1', 'Tipo da demanda e campo dos critérios de aceite', `Tipo \`${str(f['System.WorkItemType'])}\`; campos: ${acKeys.join(', ') || 'nenhum'}`, yes(acKeys.length > 0, 'Confirmado', 'Divergente: procurar o campo em `work-item.json`')],
-        ['A2', 'Campos obrigatórios do Test Case', requiredFields.join('; ') || 'não coletado', yes(requiredFields.length > 0, 'Coletado', 'Revisar manualmente')],
+        ['A2', 'Campos do Test Case (metadados; obrigatoriedade NÃO é concluída)', `${fieldRows.length} campos; alwaysRequired=true no metadado: ${metaRequired.length}; preenchidos no real: ${fieldRows.filter((r) => r.filledInRealTestCase).length}`, fieldRows.length ? 'Coletado; obrigatoriedade não comprovada' : 'Revisar manualmente'],
         ['A3', 'Steps em XML no campo `Microsoft.VSTS.TCM.Steps`', `presente=${steps ? 'sim' : 'não'}, passos=${stepCount(steps)}`, yes(!!steps, 'Confirmado (ver amostra)', d.testCase ? 'Não observado' : 'Sem Test Case')],
         ['A4', 'Convenção da suíte da demanda', `tipos: ${[...byType].map(([t, n]) => `${t}=${n}`).join(', ') || 'n/d'}; suítes para a demanda: ${demandSuites.length}`, yes(demandSuites.length > 0, 'Existe suíte requirement-based apontando para a demanda', 'Nenhuma suíte aponta para a demanda: a convenção pode ser outra (por nome/estática)')],
         ['A5', 'Test Case criado/adicionado à suíte já tem vínculo com a demanda?', `Relações do Test Case para a demanda: ${tcLinksDemand.length}; suítes do Test Case: ${tcSuites.length}`, d.testCase ? yes(tcLinksDemand.length > 0, 'Há link direto Test Case → demanda', 'Sem link direto: o vínculo pode existir só via suíte de requisito') : 'Sem Test Case'],
@@ -201,7 +255,7 @@ export function buildReport(d: DiscoveryData, o: ReportOptions): string {
       `- **Como um Test Case está ligado à US?** Links diretos: ${tcLinksDemand.length}; suítes do Test Case: ${tcSuites.length}.`,
       `- **Como o Gherkin fica salvo?** ${desc ? (/<[a-z][\s\S]*?>/i.test(desc) ? 'HTML na Description' : 'texto puro na Description') : 'Description vazia neste Test Case'}.`,
       `- **Como Action/Expected ficam no XML?** ${steps ? `campo Steps com ${stepCount(steps)} passo(s); ver amostra` : 'campo Steps ausente'}.`,
-      `- **Campos obrigatórios?** ${requiredFields.length ? requiredFields.join('; ') : 'não coletados'}.`,
+      `- **Campos obrigatórios?** Não comprovado nesta fase (leitura). O metadado indica \`alwaysRequired=true\` em: ${metaRequired.map((r) => r.referenceName).join(', ') || 'nenhum campo'}.`,
     ].join('\n'),
   );
   L.push('', '---', 'Próximo passo: revisar estes dados com o QA. **Não** iniciar geração de cenários nem escrita no Azure antes dessa revisão.', '');

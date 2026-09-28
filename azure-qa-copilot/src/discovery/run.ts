@@ -1,6 +1,6 @@
 import type { AzureReadOnlyClient } from '../azure/client.js';
 import { assertNoSecret, sanitize, type SanitizeOptions } from './sanitize.js';
-import { buildReport, type DiscoveryData } from './report.js';
+import { buildFieldUsage, buildReport, type DiscoveryData } from './report.js';
 import { flattenSuites } from './suites.js';
 
 export interface DiscoveryInput {
@@ -29,6 +29,7 @@ export interface DiscoveryResult {
   data: DiscoveryData;
 }
 
+const listOf = (v: unknown): unknown[] => (Array.isArray(v) ? v : Array.isArray((v as { value?: unknown[] } | undefined)?.value) ? ((v as { value: unknown[] }).value) : []);
 const join = (dir: string, file: string): string => `${dir.replace(/[\\/]+$/, '')}/${file}`;
 
 export async function runDiscovery(client: AzureReadOnlyClient, input: DiscoveryInput, io: DiscoveryIO): Promise<DiscoveryResult> {
@@ -100,8 +101,17 @@ export async function runDiscovery(client: AzureReadOnlyClient, input: Discovery
     data.testCaseSuites = await optional('suítes do Test Case', async () => (await client.get('testplan/suites', { scope: 'organization', query: { testCaseId } })).data);
     if (data.testCaseSuites) await saveJson('test-case-suites.json', data.testCaseSuites);
     const typeName = ((data.testCase as { fields?: Record<string, unknown> }).fields?.['System.WorkItemType'] as string | undefined) ?? 'Test Case';
-    data.testCaseTypeFields = await optional('campos do tipo Test Case', async () => (await client.get(`wit/workitemtypes/${encodeURIComponent(typeName)}/fields`, { query: { $expand: 'all' } })).data);
-    if (data.testCaseTypeFields) await saveJson('test-case-fields.json', data.testCaseTypeFields);
+    const typeRaw = await optional('metadados dos campos do tipo Test Case', async () => (await client.get(`wit/workitemtypes/${encodeURIComponent(typeName)}/fields`, { query: { $expand: 'all' } })).data);
+    // type/readOnly/supportedOperations não vêm no endpoint por tipo: estão no catálogo de campos
+    const catalogRaw = await optional('catálogo de campos (type/readOnly)', async () => (await client.get('wit/fields')).data);
+    data.testCaseTypeFields = typeRaw;
+    const wanted = new Set<string>([
+      ...listOf(typeRaw).map((x) => String((x as { referenceName?: string }).referenceName)),
+      ...Object.keys((data.testCase as { fields?: Record<string, unknown> }).fields ?? {}),
+    ]);
+    data.testCaseFieldCatalog = catalogRaw ? listOf(catalogRaw).filter((x) => wanted.has(String((x as { referenceName?: string }).referenceName))) : undefined;
+    if (typeRaw || data.testCaseFieldCatalog) await saveJson('test-case-fields.json', { typeFields: typeRaw, catalog: data.testCaseFieldCatalog });
+    await saveJson('test-case-field-usage.json', buildFieldUsage(data));
   } else if (input.planId !== undefined) {
     data.notes.push('Nenhum Test Case coletado: informe --test-case ou --suite.');
   }

@@ -69,7 +69,24 @@ export const routes: Record<string, unknown> = {
   'project:testplan/Plans/7/suites': { value: suitesTree },
   'project:testplan/Plans/7/Suites/3/TestCase': { value: [{ workItem: { id: 200, name: 'CT01' } }] },
   'organization:testplan/suites': { value: [{ id: 3, name: '100 - US teste da trava', suiteType: 'requirementTestSuite', requirementId: 100 }] },
-  'project:wit/workitemtypes/Test%20Case/fields': { value: [{ referenceName: 'System.Title', name: 'Title', alwaysRequired: true }, { referenceName: 'System.Description', name: 'Description', alwaysRequired: false }] },
+  'project:wit/workitemtypes/Test%20Case/fields': {
+    value: [
+      { referenceName: 'System.Title', name: 'Title', alwaysRequired: true },
+      { referenceName: 'System.Description', name: 'Description', alwaysRequired: false },
+      { referenceName: 'Microsoft.VSTS.Common.Priority', name: 'Priority', alwaysRequired: false, defaultValue: '2', allowedValues: ['1', '2', '3', '4'] },
+      { referenceName: 'System.Reason', name: 'Reason', alwaysRequired: false },
+    ],
+  },
+  // O endpoint por tipo NÃO traz type/readOnly; eles vêm do catálogo de campos.
+  'project:wit/fields': {
+    value: [
+      { referenceName: 'System.Title', name: 'Title', type: 'string', readOnly: false, supportedOperations: [{ referenceName: 'SupportedOperations.Equals' }] },
+      { referenceName: 'System.Description', name: 'Description', type: 'html', readOnly: false },
+      { referenceName: 'Microsoft.VSTS.Common.Priority', name: 'Priority', type: 'integer', readOnly: false },
+      { referenceName: 'System.Id', name: 'ID', type: 'integer', readOnly: true },
+      { referenceName: 'Outro.Campo', name: 'Fora do Test Case', type: 'string', readOnly: false },
+    ],
+  },
 };
 
 export interface Call {

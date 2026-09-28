@@ -32,7 +32,12 @@ O PAT precisa de leitura em **Work Items** e em **Test Management**.
 | `--report` | relatório (padrão `../docs/azure-qa-copilot/DESCOBERTA-AMBIENTE.md`) |
 
 ## Saídas
-`discovery/work-item.json`, `test-plan.json`, `test-suites.json` (árvore + lista plana + resumo), `test-case.json`, além de `test-case-suites.json`, `test-case-fields.json`, `relation-types.json` e o relatório `DESCOBERTA-AMBIENTE.md`.
+`discovery/work-item.json`, `test-plan.json`, `test-suites.json` (árvore + lista plana + resumo), `test-case.json`, além de `test-case-suites.json`, `relation-types.json` e o relatório `DESCOBERTA-AMBIENTE.md`.
+
+**Campos do Test Case:**
+- `test-case-fields.json` = **metadados dos campos** (`typeFields`: nome, `referenceName`, `alwaysRequired`, valor padrão, valores permitidos; `catalog`: tipo, `readOnly`, operações suportadas). O endpoint por tipo **não** devolve `type` nem `readOnly`; eles vêm do catálogo `GET wit/fields`.
+- `test-case-field-usage.json` = por campo, o metadado + se está **preenchido no Test Case real** (sem gravar os valores).
+- **Isto não é uma lista de campos obrigatórios.** A obrigatoriedade pode depender do tipo, do processo, do estado e de regras do projeto. Nesta fase somente leitura o "obrigatório confirmado" fica sempre **"não comprovado"**; `alwaysRequired=true` aparece apenas como "indicado pelo metadado".
 
 > `discovery/` está no `.gitignore` porque contém dados reais do seu Azure. O relatório em `docs/` **não** está ignorado: revise antes de commitar.
 

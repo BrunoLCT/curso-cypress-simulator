@@ -59,7 +59,7 @@ tests/          testes unitários com mocks separados da implementação real
 | # | Decisão | Como confirmar |
 |---|---|---|
 | A1 | Tipos de Work Item usados como "demanda" (US, EF, OS…) e o campo dos critérios de aceite | `GET /wit/workitemtypes` e `.../{type}/fields` |
-| A2 | Campos obrigatórios do Test Case (Area Path, Iteration, State, Assigned To) | `GET /wit/workitemtypes/Test Case/fields?$expand=all` |
+| A2 | Campos do Test Case e **quais são de fato obrigatórios** (Area Path, Iteration, State, Assigned To…). A API de campos dá só **metadados** (`alwaysRequired`, `readOnly`, tipo); obrigatoriedade depende do processo/regras e só se **comprova** no ambiente real | `GET /wit/workitemtypes/Test Case/fields?$expand=all` + `GET /wit/fields` (metadados); comprovação por conferência do processo ou teste em sandbox numa fase futura |
 | A3 | Formato exato do XML dos Steps | Ler `Microsoft.VSTS.TCM.Steps` de um Test Case existente |
 | A4 | Convenção da suíte da demanda (`requirementTestSuite` ou estática por nome) e nomes das suítes de Sprint | `GET /testplan/Plans/{planId}/suites?asTreeView=true` num plano real |
 | A5 | Criar Test Case + `Add` à suíte já cria o vínculo com a demanda? | Teste em plano de sandbox |

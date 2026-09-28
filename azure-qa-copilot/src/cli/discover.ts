@@ -10,7 +10,7 @@ Uso:
   npm run discover -- --work-item <ID> [--plan <ID>] [--suite <ID>] [--test-case <ID>] [opções]
 
 Credenciais (variáveis de ambiente ou .env; o PAT NUNCA é aceito por argumento):
-  AZDO_ORG, AZDO_PROJECT, AZDO_PAT, [AZDO_BASE_URL]
+  AZDO_ORG, AZDO_PROJECT, AZDO_PAT, [AZDO_BASE_URL]  (aceita também AZURE_ORG, AZURE_PROJECT, AZURE_PAT)
 
 Opções:
   --work-item   ID da demanda (obrigatório)
@@ -50,11 +50,11 @@ async function main(): Promise<number> {
     console.log(HELP);
     return v.help ? 0 : 1;
   }
-  const organization = process.env.AZDO_ORG ?? '';
-  const project = process.env.AZDO_PROJECT ?? '';
-  const pat = process.env.AZDO_PAT ?? '';
+  const organization = process.env.AZDO_ORG ?? process.env.AZURE_ORG ?? '';
+  const project = process.env.AZDO_PROJECT ?? process.env.AZURE_PROJECT ?? '';
+  const pat = process.env.AZDO_PAT ?? process.env.AZURE_PAT ?? '';
   if (!organization || !project || !pat) {
-    console.error('Defina AZDO_ORG, AZDO_PROJECT e AZDO_PAT (ver .env.example).');
+    console.error('Defina AZDO_ORG, AZDO_PROJECT e AZDO_PAT (ou AZURE_ORG/AZURE_PROJECT/AZURE_PAT). Ver .env.example.');
     return 1;
   }
   const client = new AzureReadOnlyClient({ organization, project, pat, baseUrl: process.env.AZDO_BASE_URL });

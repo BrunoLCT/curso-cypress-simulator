@@ -39,6 +39,8 @@ Há dois mecanismos: (a) suíte de requisito e (b) relação no Work Item (`PATC
 **Decisão:** **nenhuma suposição** sobre o vínculo. Uma suíte baseada em requisito e um link entre Work Items não são necessariamente a mesma coisa. Descobrir **empiricamente** (Fase 1, somente leitura): quais relações existem no Work Item; se a suíte é requirement-based e qual `requirementId` ela tem; quais links aparecem no Test Case; e se a associação à suíte cria algum vínculo adicional. O tipo de relação (esperado `TestedBy-Reverse`) deve ser lido de `GET /_apis/wit/workitemrelationtypes`.
 
 ## L7 — Campos e nomes dependem do processo do projeto
+**Metadados de campo ≠ obrigatoriedade.** O endpoint por tipo (`wit/workitemtypes/{type}/fields`) devolve só `name`, `referenceName`, `alwaysRequired`, `defaultValue`, `allowedValues`, `dependentFields` e `helpText` (**sem** `type`/`readOnly`, que ficam em `GET wit/fields`) [VERIFICADO NA SPEC]. A obrigatoriedade real pode depender do tipo de Work Item, do processo, do estado e de regras configuradas. Só se marca "obrigatório confirmado" o que for **comprovado** no ambiente real; a Fase 1 (leitura) nunca o faz.
+
 Campos como `Microsoft.VSTS.Common.AcceptanceCriteria`, `System.Description`, Area/Iteration e obrigatoriedades do Test Case variam por processo (Agile/Scrum/CMMI/customizado). Leitura por `GET /wit/workitemtypes/{type}/fields` e `GET /wit/fields`.
 
 ## L8 — Comentários usam versão preview

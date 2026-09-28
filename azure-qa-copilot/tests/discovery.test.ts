@@ -37,7 +37,8 @@ test('relatório detecta suíte requirement-based, vínculo e steps', async () =
   assert.match(md, /Apontando para a demanda 100: \*\*1\*\*/);
   assert.match(md, /Links diretos: 1/);
   assert.match(md, /Steps: campo presente[^|]*\| sim \/ 2/);
-  assert.match(md, /Title \(`System\.Title`\)/);
+  assert.match(md, /## 5\. Metadados dos campos do Test Case/);
+  assert.ok(!/## 5\. Campos obrigatórios/.test(md));
 });
 
 test('sem --plan: lista planos, grava e retorna código 2', async () => {
@@ -72,4 +73,34 @@ test('falha opcional vira aviso no relatório; falha da demanda aborta', async (
   assert.ok(r.data.notes.some((n) => n.startsWith('relation types:')));
   assert.match(opt.written.get('docs/DESCOBERTA.md') ?? '', /Avisos da execução/);
   await assert.rejects(setup({ workItemId: 999 }).run(), /404/);
+});
+
+test('metadados de campos: type/readOnly vêm do catálogo; obrigatoriedade nunca é dada como confirmada', async () => {
+  const { written, run } = setup();
+  await run();
+  const usage = JSON.parse(written.get('discovery/test-case-field-usage.json') ?? '[]') as Array<Record<string, unknown>>;
+  const by = (r: string) => usage.find((u) => u.referenceName === r);
+  assert.equal(by('System.Title')?.type, 'string');
+  assert.equal(by('System.Title')?.readOnly, false);
+  assert.equal(by('System.Title')?.alwaysRequiredPerMetadata, true);
+  assert.equal(by('System.Title')?.requiredStatus, 'indicado-pelo-metadado');
+  assert.equal(by('System.Title')?.filledInRealTestCase, true);
+  assert.equal(by('System.Reason')?.filledInRealTestCase, false, 'campo do tipo, mas vazio no Test Case real');
+  assert.equal(by('Microsoft.VSTS.Common.Priority')?.allowedValuesCount, 4);
+  assert.equal(by('Microsoft.VSTS.Common.Priority')?.hasDefaultValue, true);
+  assert.ok(usage.every((u) => u.confirmedRequired === false), 'nenhum campo pode sair como obrigatório confirmado');
+  const fields = JSON.parse(written.get('discovery/test-case-fields.json') ?? '{}') as { typeFields?: unknown; catalog?: Array<{ referenceName: string }> };
+  assert.ok(fields.typeFields && fields.catalog, 'test-case-fields.json guarda metadados (tipo + catálogo)');
+  assert.ok(!fields.catalog?.some((c) => c.referenceName === 'Outro.Campo'), 'catálogo filtrado pelos campos do Test Case');
+  const md = written.get('docs/DESCOBERTA.md') ?? '';
+  assert.match(md, /não comprovado/);
+  assert.ok(!/obrigatório confirmado \| sim/i.test(md));
+});
+
+test('falha do catálogo vira aviso e não derruba a descoberta', async () => {
+  const { written, run } = setup({}, { 'project:wit/fields': undefined });
+  const r = await run();
+  assert.equal(r.exitCode, 0);
+  assert.ok(r.data.notes.some((n) => n.startsWith('catálogo de campos')));
+  assert.ok(written.has('discovery/test-case-field-usage.json'));
 });
