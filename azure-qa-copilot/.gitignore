@@ -1,0 +1,4 @@
+node_modules/
+.env
+# Dados reais do Azure: nunca versionar sem revisar/mascarar
+/discovery/

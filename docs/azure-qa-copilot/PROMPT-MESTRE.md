@@ -139,7 +139,7 @@ Stack sugerida: TypeScript strict, Node.js; interface web local simples (React o
 | Fase | Entrega |
 |---|---|
 | 0 | Pesquisa da API e mapeamento fluxo→endpoints, com limitações documentadas |
-| 1 | Conectar ao Azure e exibir uma demanda real (título, descrição, critérios, links) |
+| 1 | **SOMENTE LEITURA (descoberta):** conectar ao Azure e gravar, sanitizado, a demanda, o Test Plan, a árvore de suítes e um Test Case real (`azure-qa-copilot/`). Sem criar, editar, adicionar à suíte nem clonar. Depois, **parar** e revisar os dados reais |
 | 2 | Navegar Test Plans e Test Suites existentes; escolher plano e suíte de destino |
 | 3 | QAScenarioAgent: gerar cenários (Gherkin + Action/Expected) para revisão |
 | 4 | Revisão e edição pelo QA; seleção dos cenários |

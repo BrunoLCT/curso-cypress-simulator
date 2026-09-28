@@ -36,7 +36,9 @@ UI (revisão do QA)
 | `verifySuite(planId, suiteId)` | `GET .../Suites/{suiteId}/TestCase` | Pronto para implementar |
 | `reuseTestCases(...)` | *(comportamento a definir após a Fase 0)* | **Fora da interface** até validar L3 |
 
-> `copyTestCases()` foi renomeado para `reuseTestCases()` e **não é uma operação confirmada**.
+> `copyTestCases()` foi renomeado para `reuseTestCases()` e **não é uma operação confirmada**. Ela permanece **abstrata**: não se escolhe ainda entre reutilizar o mesmo Test Case, clonar Test Case, clonar suíte ou outro comportamento.
+>
+> **Padronização:** todas as operações de plano/suíte/caso usam `/_apis/testplan/...` 7.1 (ver `API-MAPPING.md`).
 
 ### Estrutura de pastas proposta (para a Fase 1)
 ```

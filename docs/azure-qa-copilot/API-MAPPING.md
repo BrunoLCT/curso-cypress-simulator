@@ -57,6 +57,19 @@
 
 ---
 
+## Padronização de endpoints: família `/_apis/testplan/...` (7.1)
+
+**Decisão:** operações de Test Plan / Test Suite / Test Case usam **a família `/_apis/testplan/...` versão 7.1**. Não misturar com os endpoints antigos `/_apis/test/...`, salvo necessidade técnica documentada.
+
+Existem **duas formas oficiais** de adicionar um Test Case a uma suíte na API 7.1 [VERIFICADO NA SPEC: `testPlan/7.1` e `test/7.1`]:
+
+| Forma | Endpoint | Como passa os IDs |
+|---|---|---|
+| **Test Plan API (usar)** | `POST /_apis/testplan/Plans/{planId}/Suites/{suiteId}/TestCase` | Corpo: **array** de `SuiteTestCaseCreateUpdateParameters` (`workItem.id`, `pointAssignments`) |
+| Test API legado (não usar por ora) | `POST /_apis/test/Plans/{planId}/suites/{suiteId}/testcases/{testCaseIds}` | IDs **na própria URL** |
+
+O Test Case continua sendo criado pela API de Work Item Tracking (`POST /wit/workitems/$Test Case`).
+
 ## Endpoints extras encontrados (fora do MVP)
 
 | Operação | Endpoint | Observação |

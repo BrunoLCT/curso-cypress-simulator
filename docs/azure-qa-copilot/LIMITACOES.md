@@ -22,7 +22,8 @@ Os passos Action / Expected Result ficam no campo `Microsoft.VSTS.TCM.Steps` com
 - É **assíncrona**: devolve um `opId` e um estado (`queued`, `inProgress`, `succeeded`, `failed`) que precisa ser consultado.
 - **Cria novos Test Cases** vinculados ao original (o comentário do link é opção do clone). Isso é diferente de apenas **adicionar o mesmo Test Case existente** a outra suíte (L1, item 12), que **reutiliza** o mesmo Work Item.
 **Pontos abertos [CONFIRMAR NO AZURE REAL]:** (a) o resultado do clone pela API é idêntico ao "Copy" da interface (título, campos, passos, links, anexos)? (b) qual comportamento o vídeo demonstra: **copiar** ou **reaproveitar (adicionar existente)**? (c) as opções "reaproveitar informações/links/anexos" da interface correspondem a `includeLinks` e `includeAttachments`? A spec não tem outras opções de cópia.
-**Decisão:** `reuseTestCases()` só entra na interface **depois** dessa validação.
+- Também existe **clonagem de suíte** (`POST /testplan/Suites/CloneOperation`) e de plano (`POST /testplan/Plans/CloneOperation`), com o parâmetro `deepClone` ("clona também os Test Cases associados") [VERIFICADO NA SPEC].
+**Decisão:** `reuseTestCases()` fica **abstrato**. Não escolher ainda entre (1) reutilizar o mesmo Test Case em outra suíte, (2) clonar Test Case, (3) clonar suíte ou (4) outro comportamento. Primeiro observar o comportamento real do Azure e compará-lo com o vídeo. A operação só entra na interface **depois** dessa validação.
 
 ## L4 — Localizar o Test Plan/Suite "do contexto" não tem filtro por Sprint
 A listagem de planos só filtra por `owner` e planos ativos. Não filtra por Sprint, Area Path ou Iteration [VERIFICADO NA SPEC].
@@ -35,7 +36,7 @@ A spec prevê `requirementTestSuite` (com `requirementId`), `staticTestSuite`, `
 
 ## L6 — Vínculo Test Case ↔ demanda
 Há dois mecanismos: (a) suíte de requisito e (b) relação no Work Item (`PATCH /wit/workitems/{id}`, `add /relations/-`). Na interface, adicionar o Test Case a uma suíte de requisito cria o vínculo; **se a API faz o mesmo automaticamente não está na spec**.
-**Decisão pendente:** verificar no Azure real se o vínculo aparece após o `Add` à suíte; se não, criar a relação explicitamente. O tipo de relação (esperado `TestedBy-Reverse`) deve ser lido de `GET /_apis/wit/workitemrelationtypes`.
+**Decisão:** **nenhuma suposição** sobre o vínculo. Uma suíte baseada em requisito e um link entre Work Items não são necessariamente a mesma coisa. Descobrir **empiricamente** (Fase 1, somente leitura): quais relações existem no Work Item; se a suíte é requirement-based e qual `requirementId` ela tem; quais links aparecem no Test Case; e se a associação à suíte cria algum vínculo adicional. O tipo de relação (esperado `TestedBy-Reverse`) deve ser lido de `GET /_apis/wit/workitemrelationtypes`.
 
 ## L7 — Campos e nomes dependem do processo do projeto
 Campos como `Microsoft.VSTS.Common.AcceptanceCriteria`, `System.Description`, Area/Iteration e obrigatoriedades do Test Case variam por processo (Agile/Scrum/CMMI/customizado). Leitura por `GET /wit/workitemtypes/{type}/fields` e `GET /wit/fields`.
